@@ -1,0 +1,13 @@
+spring.datasource.url=${DB_URL:jdbc:sqlserver://163.178.173.130:1433;databaseName=ExpresoFastC5C089_II2026;encrypt=true;trustServerCertificate=true;loginTimeout=8}
+spring.datasource.username=${DB_USERNAME:Lenguajes}
+spring.datasource.password=${DB_PASSWORD}
+spring.datasource.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.hibernate.naming.physical-strategy=org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.SQLServerDialect
+spring.jpa.open-in-view=false
+spring.jpa.show-sql=false
+spring.datasource.hikari.connection-timeout=10000
+app.jwt-secret=${JWT_SECRET}
+app.jwt-expiration-milliseconds=86400000
+server.port=${PORT:8080}
