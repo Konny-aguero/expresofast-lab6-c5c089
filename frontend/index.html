@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExpresoFast - Tablero Principal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="main-header">
+        <h1>ExpresoFast - Panel de Control</h1>
+        <div class="user-info">
+            <span id="welcomeUser">Usuario</span>
+            <button id="btnLogout" class="btn-secondary">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <p id="statusMsg" role="status" aria-live="polite" hidden></p>
+        <nav class="tabs" aria-label="Secciones">
+            <button id="tabEnvios" type="button">Envíos</button>
+            <button id="tabFlota" type="button" hidden>Gestión de flota</button>
+        </nav>
+        <div id="panelEnvios">
+        <section id="createEnvioSection" class="card">
+            <h2>Registrar Nuevo Envío</h2>
+            <form id="envioForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="codigoRastreo">Código de Rastreo (Ej: EXP-1234):</label>
+                        <input type="text" id="codigoRastreo" required pattern="^EXP-\d{4}$" placeholder="EXP-1234">
+                    </div>
+                    <div class="form-group">
+                        <label for="direccionDestino">Dirección de Destino:</label>
+                        <input type="text" id="direccionDestino" maxlength="200" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="pesoKg">Peso (Kg):</label>
+                        <input type="number" id="pesoKg" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="costo">Costo (₡):</label>
+                        <input type="number" id="costo" step="0.01" min="0.01" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="vehiculoId">Vehículo:</label>
+                        <select id="vehiculoId" required><option value="">Cargando vehículos…</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="conductorId">Conductor:</label>
+                        <select id="conductorId" required><option value="">Cargando conductores…</option></select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Crear Envío</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <div class="section-heading"><h2>Envíos registrados</h2><button id="refreshEnvios" type="button">Actualizar</button></div>
+            <div class="form-row filters">
+                <div class="form-group"><label for="estadoFiltro">Estado</label><select id="estadoFiltro">
+                    <option value="">Todos</option><option>PENDIENTE</option><option>EN_TRANSITO</option><option>ENTREGADO</option><option>CANCELADO</option>
+                </select></div>
+                <div class="form-group"><label for="buscarEnvio">Buscar código o destino</label><input id="buscarEnvio" type="search"></div>
+            </div>
+            <div id="enviosContainer">
+            </div>
+        </section>
+        </div>
+        <section id="panelFlota" class="card" hidden>
+            <h2>Gestión de flota</h2>
+            <form id="vehiculoForm">
+                <input id="editVehiculoId" type="hidden">
+                <div class="form-row">
+                    <div class="form-group"><label for="placa">Placa</label><input id="placa" required maxlength="15"></div>
+                    <div class="form-group"><label for="capacidadKg">Capacidad (kg)</label><input id="capacidadKg" type="number" min="0.01" max="99999999.99" step="0.01" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="estadoVehiculo">Estado</label><select id="estadoVehiculo"><option>DISPONIBLE</option><option>EN_RUTA</option><option>MANTENIMIENTO</option></select></div>
+                    <div class="form-group"><label for="empresaId">Empresa</label><select id="empresaId" required></select></div>
+                </div>
+                <div class="card-actions"><button class="btn-primary" type="submit">Guardar vehículo</button><button id="cancelEdit" type="button">Cancelar edición</button></div>
+            </form>
+            <div id="flotaContainer" class="table-scroll"></div>
+        </section>
+    </main>
+
+    <dialog id="bitacoraModal" aria-labelledby="bitacoraTitle">
+        <div class="modal-content">
+            <button type="button" class="close-btn" id="closeModal" aria-label="Cerrar bitácora">&times;</button>
+            <h2 id="bitacoraTitle">Historial de auditoría</h2>
+            <div class="form-row">
+                <div class="form-group"><label for="fechaDesde">Desde</label><input id="fechaDesde" type="date"></div>
+                <div class="form-group"><label for="fechaHasta">Hasta</label><input id="fechaHasta" type="date"></div>
+            </div>
+            <div id="bitacoraContent">
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="actionDialog" aria-labelledby="actionTitle">
+        <form method="dialog" class="modal-content">
+            <h2 id="actionTitle">Confirmar acción</h2>
+            <div id="actionNotesGroup" class="form-group">
+                <label for="actionNotes">Observación (opcional)</label>
+                <textarea id="actionNotes" maxlength="250" rows="3"></textarea>
+            </div>
+            <div class="card-actions">
+                <button value="cancel" type="submit">Volver</button>
+                <button value="confirm" type="submit" class="btn-primary">Confirmar</button>
+            </div>
+        </form>
+    </dialog>
+    <script src="api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
