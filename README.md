@@ -91,4 +91,3 @@ docs/       Colección Postman y notas de verificación
 tests/      Pruebas del cliente JavaScript
 ```
 
-Antes de entregar, completar el nombre del estudiante, crear el repositorio `expresofast-lab6-c5c089`, mantener al menos ocho commits semánticos y registrar su enlace en Mediación Virtual. No versionar `application.properties`, archivos `.log`, `target/` ni secretos.
