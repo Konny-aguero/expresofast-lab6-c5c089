@@ -90,5 +90,17 @@ frontend/   Login, tablero, estilos y cliente Fetch API
 docs/       Colección Postman y notas de verificación
 tests/      Pruebas del cliente JavaScript
 ```
+# ExpresoFast - Laboratorio 7 (Suite de Pruebas)
 
-Antes de entregar, completar el nombre del estudiante, crear el repositorio `expresofast-lab6-c5c089`, mantener al menos ocho commits semánticos y registrar su enlace en Mediación Virtual. No versionar `application.properties`, archivos `.log`, `target/` ni secretos.
+## Ejecución de Pruebas
+Para ejecutar la suite de pruebas unitarias y de integración de este laboratorio, utilice el siguiente comando en la raíz del proyecto (o dentro de la carpeta `backend`):
+
+`mvn clean test`
+
+Para ejecutar las pruebas y además generar la validación estricta de cobertura, utilice:
+
+`mvn clean verify`
+
+## Reporte de Cobertura (JaCoCo)
+Una vez ejecutado el comando `verify`, el reporte de cobertura de código se generará automáticamente. Para visualizarlo, abra el siguiente archivo en cualquier navegador web:
+`target/site/jacoco/index.html`
