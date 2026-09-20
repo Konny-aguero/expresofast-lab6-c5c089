@@ -36,6 +36,7 @@ class Lab5ApplicationTests {
         jdbc.update("INSERT INTO EmpresaLogistica(empresa_id,nombre,cedula_juridica,telefono,fecha_registro) VALUES(1,'Test','TEST-01','2222',GETDATE())");
         jdbc.update("INSERT INTO Vehiculo(vehiculo_id,placa,capacidad_kg,estado,empresa_id) VALUES(10000,'TEST-01',100,'DISPONIBLE',1)");
         jdbc.update("INSERT INTO Conductor(conductor_id,nombre,apellidos,licencia,telefono) VALUES(1,'Carlos','Test','LIC-01','8888')");
+        jdbc.update("UPDATE Usuario SET conductor_id=1 WHERE username='conductor1'");
     }
     String token(String username) throws Exception {
         String body=mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
@@ -58,11 +59,11 @@ class Lab5ApplicationTests {
         return JsonPath.read(result,"$.id");
     }
     @Test void frontendEsPublico() throws Exception {
-        mvc.perform(get("/login.html")).andExpect(status().isOk()).andExpect(content().string(containsString("loginForm")));
+        mvc.perform(get("/index.html")).andExpect(status().isOk()).andExpect(content().string(containsString("loginForm")));
         mvc.perform(get("/api.js")).andExpect(status().isOk());
     }
     @Test void corsPermitePreflightSinToken() throws Exception {
-        for(String method:new String[]{"POST","PATCH","DELETE"})
+        for(String method:new String[]{"POST","PUT","PATCH","DELETE"})
             mvc.perform(options("/api/envios/1/estado").header("Origin","http://127.0.0.1:5500")
                 .header("Access-Control-Request-Method",method).header("Access-Control-Request-Headers","authorization,content-type"))
                 .andExpect(status().isOk()).andExpect(header().string("Access-Control-Allow-Origin","http://127.0.0.1:5500"));
@@ -99,22 +100,51 @@ class Lab5ApplicationTests {
         assertNotNull(jdbc.queryForObject("SELECT fecha_creacion FROM Envio WHERE envio_id=?",java.sql.Timestamp.class,id));
         assertNotNull(jdbc.queryForObject("SELECT fecha_modificacion FROM Envio WHERE envio_id=?",java.sql.Timestamp.class,id));
     }
-    @Test void operadorPuedeCrearYVerBitacoraPeroNoCambiarEstadoNiGestionarFlota() throws Exception {
+    @Test void operadorPuedeIniciarTransitoPeroNoVerBitacoraNiGestionarFlota() throws Exception {
         String auth=token("operador"); int id=crear(auth);
         mvc.perform(get("/api/catalogos/vehiculos").header("Authorization","Bearer "+auth)).andExpect(status().isOk());
-        mvc.perform(get("/api/envios/"+id+"/bitacora").header("Authorization","Bearer "+auth)).andExpect(status().isOk());
+        mvc.perform(get("/api/envios/"+id+"/bitacora").header("Authorization","Bearer "+auth)).andExpect(status().isForbidden());
         mvc.perform(patch("/api/envios/"+id+"/estado").header("Authorization","Bearer "+auth).contentType(MediaType.APPLICATION_JSON)
-            .content("{\"nuevoEstado\":\"EN_TRANSITO\"}")).andExpect(status().isForbidden());
+            .content("{\"nuevoEstado\":\"EN_TRANSITO\"}")).andExpect(status().isOk());
         mvc.perform(get("/api/vehiculos").header("Authorization","Bearer "+auth)).andExpect(status().isForbidden());
     }
     @Test void conductorPuedeCambiarPeroNoCrearNiVerBitacora() throws Exception {
-        int id=crear(token("admin")); String auth=token("conductor1");
-        mvc.perform(get("/api/envios/optimizados").header("Authorization","Bearer "+auth)).andExpect(status().isOk());
-        mvc.perform(patch("/api/envios/"+id+"/estado").header("Authorization","Bearer "+auth).contentType(MediaType.APPLICATION_JSON)
+        String admin=token("admin"); int id=crear(admin); String auth=token("conductor1");
+        mvc.perform(put("/api/envios/"+id+"/estado").header("Authorization","Bearer "+admin).contentType(MediaType.APPLICATION_JSON)
             .content("{\"nuevoEstado\":\"EN_TRANSITO\"}")).andExpect(status().isOk());
+        mvc.perform(get("/api/envios/optimizados").header("Authorization","Bearer "+auth)).andExpect(status().isOk());
+        mvc.perform(put("/api/envios/"+id+"/estado").header("Authorization","Bearer "+auth).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nuevoEstado\":\"ENTREGADO\"}")).andExpect(status().isOk());
         mvc.perform(post("/api/envios").header("Authorization","Bearer "+auth).contentType(MediaType.APPLICATION_JSON)
             .content(envio("EXP-9999",1,1,"1"))).andExpect(status().isForbidden());
         mvc.perform(get("/api/envios/"+id+"/bitacora").header("Authorization","Bearer "+auth)).andExpect(status().isForbidden());
+    }
+    @Test void conductorNoVeNiEntregaEnviosAjenos() throws Exception {
+        String admin=token("admin"); int id=crear(admin);
+        jdbc.update("INSERT INTO Conductor(conductor_id,nombre,apellidos,licencia,telefono) VALUES(2,'Otro','Conductor','LIC-02','9999')");
+        jdbc.update("UPDATE Envio SET conductor_id=2, estado_envio='EN_TRANSITO' WHERE envio_id=?",id);
+        entityManager.clear();
+        String auth=token("conductor1");
+        mvc.perform(get("/api/envios").header("Authorization","Bearer "+auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(put("/api/envios/"+id+"/estado").header("Authorization","Bearer "+auth).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nuevoEstado\":\"ENTREGADO\"}")).andExpect(status().isForbidden());
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM BitacoraEnvio",Integer.class));
+    }
+    @Test void asignacionValidaCapacidadYEstado() throws Exception {
+        String auth=token("operador"); int id=crear(auth);
+        jdbc.update("INSERT INTO Vehiculo(vehiculo_id,placa,capacidad_kg,estado,empresa_id) VALUES(10001,'OTRO-01',200,'DISPONIBLE',1),(10002,'MIN-01',1,'DISPONIBLE',1),(10003,'TALLER-01',200,'MANTENIMIENTO',1)");
+        for(int vehiculo:new int[]{10002,10003})
+            mvc.perform(put("/api/envios/"+id+"/vehiculo").header("Authorization","Bearer "+auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"vehiculoId\":"+vehiculo+"}")).andExpect(status().isBadRequest());
+        mvc.perform(put("/api/envios/"+id+"/vehiculo").header("Authorization","Bearer "+auth).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"vehiculoId\":10001}")).andExpect(status().isOk()).andExpect(jsonPath("$.placaVehiculo").value("OTRO-01"));
+        mvc.perform(put("/api/envios/"+id+"/estado").header("Authorization","Bearer "+auth).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nuevoEstado\":\"EN_TRANSITO\"}")).andExpect(status().isOk());
+        mvc.perform(put("/api/envios/"+id+"/estado").header("Authorization","Bearer "+auth).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nuevoEstado\":\"ENTREGADO\"}")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/envios/"+id+"/vehiculo").header("Authorization","Bearer "+auth).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"vehiculoId\":10000}")).andExpect(status().isBadRequest());
     }
     @Test void validacionEvitaNulosEstadosYExcesoDeLongitud() throws Exception {
         String auth=token("admin");

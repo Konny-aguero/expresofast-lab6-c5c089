@@ -36,6 +36,13 @@ public class Usuario {
     )
     private Set<Rol> roles;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conductor_id")
+    private Conductor conductor;
+
+    public Conductor getConductor() { return conductor; }
+    public void setConductor(Conductor conductor) { this.conductor = conductor; }
+
     public Integer getId() {
         return id;
     }

@@ -43,14 +43,17 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 
-                .requestMatchers("/", "/index.html", "/login.html", "/styles.css", "/app.js", "/api.js", "/login.js", "/favicon.ico", "/error").permitAll()
+                .requestMatchers("/", "/index.html", "/dashboard.html", "/login.html", "/styles.css", "/app.js", "/api.js", "/favicon.ico", "/error").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/catalogos/vehiculos").hasAnyRole("ADMIN", "OPERADOR", "CONDUCTOR")
                 .requestMatchers(HttpMethod.GET, "/api/catalogos/**").hasAnyRole("ADMIN", "OPERADOR")
                 
-                .requestMatchers(HttpMethod.GET, "/api/envios/optimizados").hasAnyRole("ADMIN", "OPERADOR", "CONDUCTOR")
+                .requestMatchers(HttpMethod.GET, "/api/envios", "/api/envios/optimizados").hasAnyRole("ADMIN", "OPERADOR", "CONDUCTOR")
                 .requestMatchers(HttpMethod.POST, "/api/envios").hasAnyRole("ADMIN", "OPERADOR")
-                .requestMatchers(HttpMethod.PATCH, "/api/envios/*/estado").hasAnyRole("ADMIN", "CONDUCTOR")
-                .requestMatchers(HttpMethod.GET, "/api/envios/*/bitacora").hasAnyRole("ADMIN", "OPERADOR")
+                .requestMatchers(HttpMethod.PATCH, "/api/envios/*/estado").hasAnyRole("ADMIN", "OPERADOR", "CONDUCTOR")
+                .requestMatchers(HttpMethod.PUT, "/api/envios/*/estado").hasAnyRole("ADMIN", "OPERADOR", "CONDUCTOR")
+                .requestMatchers(HttpMethod.PUT, "/api/envios/*/vehiculo").hasAnyRole("ADMIN", "OPERADOR")
+                .requestMatchers(HttpMethod.GET, "/api/envios/*/bitacora").hasRole("ADMIN")
                 .requestMatchers("/api/vehiculos/**").hasRole("ADMIN")
                 
                 .anyRequest().authenticated()
@@ -77,6 +80,7 @@ public class SecurityConfig {
         cors.setAllowedOriginPatterns(java.util.List.of("http://localhost:*", "http://127.0.0.1:*"));
         cors.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cors.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type"));
+        cors.setAllowCredentials(true);
         cors.setMaxAge(3600L);
         var source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cors);

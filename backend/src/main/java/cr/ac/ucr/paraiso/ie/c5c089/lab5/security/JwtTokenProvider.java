@@ -30,6 +30,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(username)
+                .claim("roles", authentication.getAuthorities().stream().map(a -> a.getAuthority()).toList())
                 .issuedAt(currentDate)
                 .expiration(expireDate)
                 .signWith(key())

@@ -66,7 +66,8 @@ CREATE TABLE Usuario (
     password_hash VARCHAR(255) NOT NULL,
     nombre_completo VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
-    activo BIT NOT NULL DEFAULT 1
+    activo BIT NOT NULL DEFAULT 1,
+    conductor_id INT NULL REFERENCES Conductor(conductor_id)
 );
 
 CREATE TABLE Rol (

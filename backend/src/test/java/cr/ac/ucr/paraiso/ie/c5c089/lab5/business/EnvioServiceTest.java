@@ -110,7 +110,7 @@ class EnvioServiceTest {
         cambio.setNuevoEstado("EN_TRANSITO");
         cambio.setObservaciones("Salida de bodega");
         SecurityContextHolder.getContext().setAuthentication(
-            new TestingAuthenticationToken("operador", "clave")
+            new TestingAuthenticationToken("operador", "clave", "ROLE_OPERADOR")
         );
         when(envios.findByIdForUpdate(1)).thenReturn(Optional.of(envio));
         when(usuarios.findByUsername("operador")).thenReturn(Optional.of(usuario));

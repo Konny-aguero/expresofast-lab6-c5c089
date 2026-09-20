@@ -5,6 +5,7 @@ import cr.ac.ucr.paraiso.ie.c5c089.lab5.domain.*;
 import cr.ac.ucr.paraiso.ie.c5c089.lab5.dto.*;
 import cr.ac.ucr.paraiso.ie.c5c089.lab5.exception.*;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -31,7 +32,16 @@ public class EnvioService {
     }
     @Transactional(readOnly=true)
     public List<EnvioResponseDTO> obtenerEnviosOptimizados() {
-        return envios.findAllOptimizados().stream().map(this::respuesta).toList();
+        Integer conductorId = null;
+        if (!tieneRol("ADMIN") && !tieneRol("OPERADOR")) {
+            Usuario usuario = usuarioActual();
+            if (usuario.getConductor() == null) return List.of();
+            conductorId = usuario.getConductor().getId();
+        }
+        Integer asignado = conductorId;
+        return envios.findAllOptimizados().stream()
+            .filter(e -> asignado == null || asignado.equals(e.getConductor().getId()))
+            .map(this::respuesta).toList();
     }
     public EnvioResponseDTO registrarEnvio(EnvioRequestDTO dto) {
         Vehiculo vehiculo = vehiculos.findById(dto.getVehiculoId())
@@ -49,7 +59,6 @@ public class EnvioService {
         return respuesta(envios.saveAndFlush(envio));
     }
     public EnvioResponseDTO cambiarEstadoEnvio(Integer id, CambioEstadoDTO dto) {
-        // Serializa cambios simultáneos sin agregar columnas a la base de los laboratorios.
         Envio envio=envios.findByIdForUpdate(id)
             .orElseThrow(() -> new ResourceNotFoundException("Envío no encontrado"));
         String anterior=envio.getEstadoEnvio();
@@ -58,6 +67,16 @@ public class EnvioService {
         String username=SecurityContextHolder.getContext().getAuthentication().getName();
         Usuario usuario=usuarios.findByUsername(username)
             .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        if (!tieneRol("ADMIN")) {
+            if (tieneRol("OPERADOR")) {
+                if (!"EN_TRANSITO".equals(dto.getNuevoEstado()))
+                    throw new AccessDeniedException("El operador solo puede iniciar el tránsito");
+            } else if (!tieneRol("CONDUCTOR") || usuario.getConductor() == null
+                    || !usuario.getConductor().getId().equals(envio.getConductor().getId())
+                    || !"ENTREGADO".equals(dto.getNuevoEstado())) {
+                throw new AccessDeniedException("El conductor solo puede entregar sus envíos asignados");
+            }
+        }
         envio.setEstadoEnvio(dto.getNuevoEstado());
         BitacoraEnvio bitacora=new BitacoraEnvio();
         bitacora.setEnvio(envio); bitacora.setUsuario(usuario); bitacora.setEstadoAnterior(anterior);
@@ -74,6 +93,28 @@ public class EnvioService {
             dto.setFechaCambio(b.getFechaCambio()); dto.setUsuario(b.getUsuario().getUsername());
             dto.setObservaciones(b.getObservaciones()); return dto;
         }).toList();
+    }
+    public EnvioResponseDTO asignarVehiculo(Integer id, Integer vehiculoId) {
+        Envio envio = envios.findByIdForUpdate(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Envío no encontrado"));
+        if (!"PENDIENTE".equals(envio.getEstadoEnvio()))
+            throw new IllegalArgumentException("Solo se puede asignar un vehículo a un envío pendiente");
+        Vehiculo vehiculo = vehiculos.findById(vehiculoId)
+            .orElseThrow(() -> new ResourceNotFoundException("Vehículo no encontrado"));
+        if ("MANTENIMIENTO".equals(vehiculo.getEstado()) || envio.getPesoKg().compareTo(vehiculo.getCapacidadKg()) > 0)
+            throw new IllegalArgumentException("El vehículo no está disponible o no tiene capacidad suficiente");
+        envio.setVehiculo(vehiculo);
+        return respuesta(envio);
+    }
+    private boolean tieneRol(String rol) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_" + rol));
+    }
+    private Usuario usuarioActual() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) throw new AccessDeniedException("Sesión requerida");
+        return usuarios.findByUsername(auth.getName())
+            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     }
     private EnvioResponseDTO respuesta(Envio e) {
         EnvioResponseDTO dto=new EnvioResponseDTO();

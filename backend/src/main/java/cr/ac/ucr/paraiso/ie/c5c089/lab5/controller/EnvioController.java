@@ -12,14 +12,18 @@ import java.util.List;
 public class EnvioController {
     private final EnvioService service;
     public EnvioController(EnvioService service) { this.service = service; }
-    @GetMapping("/optimizados")
+    @GetMapping({"", "/optimizados"})
     public List<EnvioResponseDTO> listar() { return service.obtenerEnviosOptimizados(); }
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public EnvioResponseDTO crear(@Valid @RequestBody EnvioRequestDTO dto) { return service.registrarEnvio(dto); }
-    @PatchMapping("/{id}/estado")
+    @RequestMapping(value = "/{id}/estado", method = {RequestMethod.PUT, RequestMethod.PATCH})
     public EnvioResponseDTO cambiar(@PathVariable Integer id, @Valid @RequestBody CambioEstadoDTO dto) {
         return service.cambiarEstadoEnvio(id, dto);
+    }
+    @PutMapping("/{id}/vehiculo")
+    public EnvioResponseDTO asignar(@PathVariable Integer id, @Valid @RequestBody AsignacionVehiculoDTO dto) {
+        return service.asignarVehiculo(id, dto.vehiculoId());
     }
     @GetMapping("/{id}/bitacora")
     public List<BitacoraResponseDTO> bitacora(@PathVariable Integer id) { return service.obtenerBitacoraPorEnvio(id); }

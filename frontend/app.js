@@ -1,3 +1,22 @@
+if (document.getElementById('loginForm')) {
+document.getElementById('loginForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = event.submitter;
+    const error = document.getElementById('errorMsg');
+    error.textContent = ''; button.disabled = true;
+    try {
+        const data = await apiFetch('/auth/login', {
+            method: 'POST', body: JSON.stringify({
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('password').value
+            })
+        }, false);
+        sessionStorage.setItem('jwt_token', data.token);
+        location.href = 'dashboard.html';
+    } catch (ex) { error.textContent = ex.message; }
+    finally { button.disabled = false; }
+});
+}
 let envios = [], bitacoras = [], flota = [];
 const $ = id => document.getElementById(id);
 const money = new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' });
@@ -18,12 +37,12 @@ function boton(label, action, className = 'btn-info') {
     }); return b;
 }
 async function cargarEnvios() {
-    $('enviosContainer').textContent = 'Cargando envíos…';
-    try { envios = await fetchWithAuth('/envios/optimizados'); renderEnvios(); }
-    catch (ex) { $('enviosContainer').textContent = 'No se pudieron cargar los envíos.'; mensaje(ex.message, true); }
+    $('enviosGrid').textContent = 'Cargando envíos…';
+    try { envios = await fetchWithAuth('/envios'); renderEnvios(); actualizarKpi(); }
+    catch (ex) { $('enviosGrid').textContent = 'No se pudieron cargar los envíos.'; mensaje(ex.message, true); }
 }
 function renderEnvios() {
-    const container = $('enviosContainer'); container.replaceChildren();
+    const container = $('enviosGrid'); container.replaceChildren();
     const query = $('buscarEnvio').value.toLocaleLowerCase();
     const visibles = envios.filter(e => (!$('estadoFiltro').value || e.estadoEnvio === $('estadoFiltro').value)
         && `${e.codigoRastreo} ${e.direccionDestino}`.toLocaleLowerCase().includes(query));
@@ -34,14 +53,30 @@ function renderEnvios() {
             texto('p', `Destino: ${e.direccionDestino}`), texto('p', `Peso: ${e.pesoKg} kg · Costo: ${money.format(e.costo)}`),
             texto('p', `Vehículo: ${e.placaVehiculo}`), texto('p', `Conductor: ${e.nombreConductor}`));
         const actions = document.createElement('div'); actions.className = 'card-actions';
-        if (tieneRol('ADMIN', 'OPERADOR')) actions.append(boton('Ver bitácora', () => verBitacora(e.id)));
-        if (tieneRol('ADMIN', 'CONDUCTOR')) {
-            if (e.estadoEnvio === 'PENDIENTE') actions.append(boton('Marcar en tránsito', () => cambiarEstado(e.id, 'EN_TRANSITO'), 'btn-warning'));
-            if (e.estadoEnvio === 'EN_TRANSITO') actions.append(boton('Marcar entregado', () => cambiarEstado(e.id, 'ENTREGADO'), 'btn-success'));
-            if (['PENDIENTE', 'EN_TRANSITO'].includes(e.estadoEnvio)) actions.append(boton('Cancelar envío', () => cambiarEstado(e.id, 'CANCELADO'), 'btn-danger'));
+        if (tieneRol('ADMIN')) actions.append(boton('Ver bitácora', () => verBitacora(e.id)));
+        if (tieneRol('ADMIN', 'OPERADOR', 'CONDUCTOR')) {
+            if (e.estadoEnvio === 'PENDIENTE' && tieneRol('ADMIN', 'OPERADOR')) actions.append(boton('Asignar vehículo', () => asignarVehiculo(e.id)));
+            if (e.estadoEnvio === 'PENDIENTE' && tieneRol('ADMIN', 'OPERADOR')) actions.append(boton('Marcar en tránsito', () => cambiarEstado(e.id, 'EN_TRANSITO'), 'btn-warning'));
+            if (e.estadoEnvio === 'EN_TRANSITO' && tieneRol('ADMIN', 'CONDUCTOR')) actions.append(boton('Marcar entregado', () => cambiarEstado(e.id, 'ENTREGADO'), 'btn-success'));
+            if (tieneRol('ADMIN') && ['PENDIENTE', 'EN_TRANSITO'].includes(e.estadoEnvio)) actions.append(boton('Cancelar envío', () => cambiarEstado(e.id, 'CANCELADO'), 'btn-danger'));
         }
         card.append(actions); container.append(card);
     });
+}
+function actualizarKpi() {
+    $('totalEnvios').textContent = envios.length;
+    $('paquetesEntregados').textContent = envios.filter(e => e.estadoEnvio === 'ENTREGADO').length;
+}
+async function asignarVehiculo(id) {
+    const vehiculos = await fetchWithAuth('/catalogos/vehiculos');
+    const envio = envios.find(e => e.id === id);
+    opciones('asignarVehiculoId', vehiculos.filter(v => v.estado !== 'MANTENIMIENTO' && v.capacidadKg >= envio.pesoKg), v => v.placa);
+    const dialog = $('asignacionDialog'); dialog.returnValue = '';
+    const confirmado = new Promise(resolve => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true }));
+    dialog.showModal();
+    if (!await confirmado) return;
+    await fetchWithAuth(`/envios/${id}/vehiculo`, { method: 'PUT', body: JSON.stringify({ vehiculoId: Number($('asignarVehiculoId').value) }) });
+    mensaje('Vehículo asignado.'); await cargarEnvios();
 }
 function confirmarAccion(titulo, conObservaciones = false) {
     const dialog = $('actionDialog');
@@ -56,13 +91,14 @@ async function cambiarEstado(id, nuevoEstado) {
     const observaciones = await confirmarAccion(`Cambiar envío a ${nuevoEstado}`, true);
     if (observaciones === null) return;
     if (observaciones.length > 250) throw new Error('La observación no puede superar 250 caracteres.');
-    await fetchWithAuth(`/envios/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ nuevoEstado, observaciones }) });
+    await fetchWithAuth(`/envios/${id}/estado`, { method: 'PUT', body: JSON.stringify({ nuevoEstado, observaciones }) });
     mensaje('Estado actualizado y cambio registrado en la bitácora.'); await cargarEnvios();
 }
 async function verBitacora(id) {
     bitacoras = await fetchWithAuth(`/envios/${id}/bitacora`);
     $('fechaDesde').value = ''; $('fechaHasta').value = ''; renderBitacora();
-    $('bitacoraModal').showModal();
+    $('bitacoraTitle').textContent = `Bitácora del envío ${envios.find(e => e.id === id).codigoRastreo}`;
+    $('bitacoraTitle').focus();
 }
 function renderBitacora() {
     const content = $('bitacoraContent'); content.replaceChildren();
@@ -70,16 +106,13 @@ function renderBitacora() {
     if (desde && hasta && desde > hasta) { content.textContent = 'La fecha inicial no puede ser posterior a la final.'; return; }
     const rows = bitacoras.filter(b => (!desde || b.fechaCambio.slice(0, 10) >= desde) && (!hasta || b.fechaCambio.slice(0, 10) <= hasta));
     if (!rows.length) { content.textContent = 'No hay registros de auditoría en este rango.'; return; }
-    const table = document.createElement('table'); table.className = 'table-audit';
-    const head = document.createElement('thead'), tr = document.createElement('tr');
-    ['Fecha', 'Anterior', 'Nuevo', 'Usuario', 'Observaciones'].forEach(t => tr.append(texto('th', t)));
-    head.append(tr); table.append(head); const body = document.createElement('tbody');
     rows.forEach(b => {
-        const row = document.createElement('tr');
-        [new Date(b.fechaCambio).toLocaleString('es-CR'), b.estadoAnterior, b.estadoNuevo, b.usuario, b.observaciones || '—']
-            .forEach(value => row.append(texto('td', value)));
-        body.append(row);
-    }); table.append(body); content.append(table);
+        const row = document.createElement('article'); row.className = 'audit-entry';
+        row.append(texto('h3', `${b.estadoAnterior} → ${b.estadoNuevo}`),
+            texto('p', new Date(b.fechaCambio).toLocaleString('es-CR')),
+            texto('p', `Usuario: ${b.usuario}`), texto('p', b.observaciones || 'Sin observaciones'));
+        content.append(row);
+    });
 }
 function opciones(id, values, label) {
     const select = $(id), previous = select.value; select.replaceChildren(new Option('Seleccione…', ''));
@@ -95,6 +128,7 @@ async function cargarCatalogos() {
 }
 async function cargarFlota() {
     flota = await fetchWithAuth('/vehiculos'); const container = $('flotaContainer'); container.replaceChildren();
+    $('vehiculosActivos').textContent = flota.filter(v => v.estado !== 'MANTENIMIENTO').length;
     if (!flota.length) { container.textContent = 'Todavía no hay vehículos registrados.'; return; }
     flota.forEach(v => {
         const card = document.createElement('article'); card.className = 'envio-card';
@@ -118,10 +152,11 @@ function manejarFormulario(id, action) {
     });
 }
 document.addEventListener('DOMContentLoaded', async () => {
-    if (!localStorage.getItem('jwt_token')) { cerrarSesion(); return; }
-    const expiration = Number(localStorage.getItem('expirationTime'));
-    if (expiration && expiration <= Date.now()) { cerrarSesion(); return; }
-    $('welcomeUser').textContent = `${localStorage.getItem('username')} · ${obtenerRoles().map(r => r.replace('ROLE_', '')).join(', ')}`;
+    if (!$('enviosGrid')) return;
+    if (!sessionStorage.getItem('jwt_token')) { cerrarSesion(); return; }
+    const expiration = Number(obtenerSesion().exp) * 1000;
+    if (!expiration || expiration <= Date.now()) { cerrarSesion(); return; }
+    $('welcomeUser').textContent = `${obtenerSesion().sub} · ${obtenerRoles().map(r => r.replace('ROLE_', '')).join(', ')}`;
     $('btnLogout').addEventListener('click', cerrarSesion);
     $('createEnvioSection').hidden = !tieneRol('ADMIN', 'OPERADOR'); $('tabFlota').hidden = !tieneRol('ADMIN');
     $('tabEnvios').addEventListener('click', () => { $('panelEnvios').hidden = false; $('panelFlota').hidden = true; });
@@ -132,7 +167,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('estadoFiltro').addEventListener('change', renderEnvios); $('buscarEnvio').addEventListener('input', renderEnvios);
     $('refreshEnvios').addEventListener('click', cargarEnvios);
     $('fechaDesde').addEventListener('change', renderBitacora); $('fechaHasta').addEventListener('change', renderBitacora);
-    $('closeModal').addEventListener('click', () => $('bitacoraModal').close());
+    $('auditPanel').hidden = !tieneRol('ADMIN');
+    document.querySelectorAll('[data-estado]').forEach(button => button.addEventListener('click', () => {
+        $('estadoFiltro').value = button.dataset.estado; renderEnvios();
+        document.querySelectorAll('[data-estado]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+    }));
     $('cancelEdit').addEventListener('click', () => { $('vehiculoForm').reset(); $('editVehiculoId').value = ''; });
     manejarFormulario('envioForm', async () => {
         await fetchWithAuth('/envios', { method: 'POST', body: JSON.stringify({
@@ -150,6 +189,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         await Promise.all([cargarFlota(), cargarCatalogos()]);
     });
     await cargarEnvios();
+    try {
+        const vehiculos = await fetchWithAuth('/catalogos/vehiculos');
+        $('vehiculosActivos').textContent = vehiculos.filter(v => v.estado !== 'MANTENIMIENTO').length;
+    } catch (ex) { mensaje(ex.message, true); }
     if (tieneRol('ADMIN', 'OPERADOR')) {
         try { await cargarCatalogos(); } catch (ex) { mensaje(ex.message, true); }
     }

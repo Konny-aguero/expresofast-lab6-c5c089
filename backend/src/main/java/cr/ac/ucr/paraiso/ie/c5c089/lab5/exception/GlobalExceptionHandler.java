@@ -18,13 +18,17 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
     private static final Logger log=LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private ResponseEntity<?> error(HttpStatus status, String mensaje) {
-        return ResponseEntity.status(status).body(Map.of("status",status.value(),"error",mensaje));
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, mensaje);
+        problem.setProperty("error", mensaje);
+        return ResponseEntity.status(status).body(problem);
     }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> validation(MethodArgumentNotValidException ex) {
         Map<String,String> fields=new LinkedHashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(e -> fields.put(e.getField(),e.getDefaultMessage()));
-        return ResponseEntity.badRequest().body(Map.of("status",400,"error","Revise los campos del formulario","fields",fields));
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Revise los campos del formulario");
+        problem.setProperty("fields", fields);
+        return ResponseEntity.badRequest().body(problem);
     }
     @ExceptionHandler({InvalidStateTransitionException.class, IllegalArgumentException.class})
     public ResponseEntity<?> business(RuntimeException ex) { return error(HttpStatus.BAD_REQUEST,ex.getMessage()); }
