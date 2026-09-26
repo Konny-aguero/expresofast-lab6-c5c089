@@ -8,23 +8,34 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/envios")
 public class EnvioController {
     private final EnvioService service;
     public EnvioController(EnvioService service) { this.service = service; }
-    @GetMapping({"", "/optimizados"})
+    @GetMapping({"/api/envios", "/api/envios/optimizados"})
     public List<EnvioResponseDTO> listar() { return service.obtenerEnviosOptimizados(); }
-    @PostMapping
+    @GetMapping("/api/v1/envios")
+    public org.springframework.data.domain.Page<EnvioDTO> listarPaginado(
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "fechaCreacion") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction,
+            @RequestParam(defaultValue = "") String busqueda, @RequestParam(defaultValue = "") String estado) {
+        return service.listarPaginado(page, size, sortBy, direction, busqueda, estado);
+    }
+    @GetMapping("/api/v1/envios/procedimiento/{estado}")
+    public List<EnvioDTO> procedimiento(@PathVariable String estado) {
+        return service.listarViaStoredProcedure(estado);
+    }
+    @PostMapping("/api/envios")
     @ResponseStatus(HttpStatus.CREATED)
     public EnvioResponseDTO crear(@Valid @RequestBody EnvioRequestDTO dto) { return service.registrarEnvio(dto); }
-    @RequestMapping(value = "/{id}/estado", method = {RequestMethod.PUT, RequestMethod.PATCH})
+    @RequestMapping(value = "/api/envios/{id}/estado", method = {RequestMethod.PUT, RequestMethod.PATCH})
     public EnvioResponseDTO cambiar(@PathVariable Integer id, @Valid @RequestBody CambioEstadoDTO dto) {
         return service.cambiarEstadoEnvio(id, dto);
     }
-    @PutMapping("/{id}/vehiculo")
+    @PutMapping("/api/envios/{id}/vehiculo")
     public EnvioResponseDTO asignar(@PathVariable Integer id, @Valid @RequestBody AsignacionVehiculoDTO dto) {
         return service.asignarVehiculo(id, dto.vehiculoId());
     }
-    @GetMapping("/{id}/bitacora")
+    @GetMapping("/api/envios/{id}/bitacora")
     public List<BitacoraResponseDTO> bitacora(@PathVariable Integer id) { return service.obtenerBitacoraPorEnvio(id); }
 }

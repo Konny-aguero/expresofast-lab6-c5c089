@@ -174,4 +174,28 @@ class EnvioServiceTest {
         envio.setConductor(conductor());
         return envio;
     }
+
+    @Test void procedimientoMapeaDtoYValidaEstado() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("admin", "", "ROLE_ADMIN"));
+        Envio envio = envio("PENDIENTE");
+        envio.setDestinatario("Ana");
+        when(envios.obtenerPorEstado("PENDIENTE")).thenReturn(java.util.List.of(envio));
+        assertEquals("Ana", service.listarViaStoredProcedure("PENDIENTE").get(0).destinatario());
+        assertThrows(IllegalArgumentException.class, () -> service.listarViaStoredProcedure(""));
+        assertThrows(IllegalArgumentException.class, () -> service.listarViaStoredProcedure("OTRO"));
+    }
+
+    @Test void procedimientoConductorNoDevuelveEnviosAjenos() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("conductor", "", "ROLE_CONDUCTOR"));
+        Usuario usuario = new Usuario();
+        usuario.setConductor(conductor());
+        when(usuarios.findByUsername("conductor")).thenReturn(Optional.of(usuario));
+        Envio propio = envio("PENDIENTE");
+        Envio ajeno = envio("PENDIENTE");
+        Conductor otro = new Conductor(); otro.setId(999); ajeno.setConductor(otro);
+        when(envios.obtenerPorEstado("PENDIENTE")).thenReturn(java.util.List.of(propio, ajeno));
+        assertEquals(1, service.listarViaStoredProcedure("PENDIENTE").size());
+        usuario.setConductor(null);
+        assertEquals(0, service.listarViaStoredProcedure("PENDIENTE").size());
+    }
 }

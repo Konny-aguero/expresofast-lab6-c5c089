@@ -7,6 +7,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "Envio")
+@NamedStoredProcedureQuery(name = "Envio.porEstado", procedureName = "SP_OBTENER_ENVIOS_POR_ESTADO",
+    resultClasses = Envio.class,
+    parameters = @StoredProcedureParameter(mode = ParameterMode.IN, name = "pEstado", type = String.class))
 public class Envio extends AuditableEntity {
 
     @Id
@@ -40,6 +43,12 @@ public class Envio extends AuditableEntity {
     @OneToMany(mappedBy = "envio", cascade = CascadeType.ALL)
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<BitacoraEnvio> bitacoras;
+
+    @Column(length = 100)
+    private String destinatario;
+
+    public String getDestinatario() { return destinatario; }
+    public void setDestinatario(String destinatario) { this.destinatario = destinatario; }
 
     public Envio() {
     }

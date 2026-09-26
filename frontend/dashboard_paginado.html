@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExpresoFast - Envíos paginados</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="api.js" defer></script>
+    <script src="paginacion.js" defer></script>
+</head>
+<body>
+    <header class="main-header">
+        <h1>ExpresoFast - Envíos paginados</h1>
+        <button id="salir" type="button">Cerrar sesión</button>
+    </header>
+    <main class="container">
+        <p><a href="dashboard.html">Volver al panel de control</a></p>
+        <section class="card" aria-label="Consulta de envíos">
+            <form id="filtros">
+                <div class="form-row">
+                    <div class="form-group"><label for="busqueda">Buscar</label><input id="busqueda" type="search" placeholder="Rastreo, destinatario o dirección"></div>
+                    <div class="form-group"><label for="estado">Estado</label><select id="estado">
+                        <option value="">Todos</option><option>PENDIENTE</option><option>EN_TRANSITO</option><option>ENTREGADO</option><option>CANCELADO</option>
+                    </select></div>
+                    <div class="form-group"><label for="size">Envíos por página</label><select id="size"><option>5</option><option>10</option><option>20</option></select></div>
+                    <div class="form-group"><label for="procedimiento">Stored Procedure</label><select id="procedimiento">
+                        <option value="">Consulta paginada</option><option>PENDIENTE</option><option>EN_TRANSITO</option><option>ENTREGADO</option><option>CANCELADO</option>
+                    </select></div>
+                </div>
+                <button type="submit" class="btn-primary">Consultar</button>
+            </form>
+            <p id="error" role="alert"></p>
+            <div class="table-scroll">
+                <table class="table-audit">
+                    <caption>Guías de envío</caption>
+                    <thead><tr><th scope="col">Rastreo</th><th scope="col">Destinatario</th><th scope="col">Dirección</th><th scope="col">Flete</th><th scope="col">Estado</th></tr></thead>
+                    <tbody id="envios"></tbody>
+                </table>
+            </div>
+            <p id="indicador" role="status" aria-live="polite"></p>
+            <nav class="card-actions" aria-label="Paginación">
+                <button id="primera" type="button" disabled>&lt;&lt; Primera</button>
+                <button id="anterior" type="button" disabled>&lt; Anterior</button>
+                <button id="siguiente" type="button" disabled>Siguiente &gt;</button>
+                <button id="ultima" type="button" disabled>Última &gt;&gt;</button>
+            </nav>
+        </section>
+    </main>
+</body>
+</html>

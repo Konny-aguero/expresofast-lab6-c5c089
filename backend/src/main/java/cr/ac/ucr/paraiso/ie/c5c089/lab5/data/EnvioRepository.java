@@ -23,6 +23,21 @@ public interface EnvioRepository extends JpaRepository<Envio, Integer> {
            "JOIN FETCH e.conductor")
     List<Envio> findAllOptimizados();
 
+    @org.springframework.data.jpa.repository.query.Procedure(name = "Envio.porEstado")
+    List<Envio> obtenerPorEstado(@Param("pEstado") String estado);
+
+    @Query("""
+        SELECT e FROM Envio e
+        WHERE (:estado = '' OR e.estadoEnvio = :estado)
+          AND (:conductorId IS NULL OR e.conductor.id = :conductorId)
+          AND (LOWER(e.codigoRastreo) LIKE LOWER(CONCAT('%', :busqueda, '%'))
+            OR LOWER(e.destinatario) LIKE LOWER(CONCAT('%', :busqueda, '%'))
+            OR LOWER(e.direccionDestino) LIKE LOWER(CONCAT('%', :busqueda, '%')))
+        """)
+    org.springframework.data.domain.Page<Envio> buscarPaginado(
+        @Param("busqueda") String busqueda, @Param("estado") String estado,
+        @Param("conductorId") Integer conductorId, org.springframework.data.domain.Pageable pageable);
+
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Envio e SET e.estadoEnvio = :estado WHERE e.vehiculo.id = :vehiculoId")
     void actualizarEstadoMasivoPorVehiculo(@Param("vehiculoId") Integer vehiculoId, @Param("estado") String estado);

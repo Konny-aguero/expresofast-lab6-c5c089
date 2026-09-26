@@ -37,6 +37,7 @@ CREATE TABLE Vehiculo (
 CREATE TABLE Envio (
     envio_id INT IDENTITY(1,1) PRIMARY KEY,
     codigo_rastreo VARCHAR(30) NOT NULL UNIQUE,
+    destinatario VARCHAR(100),
     direccion_destino VARCHAR(200) NOT NULL,
     peso_kg DECIMAL(10,2) NOT NULL,
     costo DECIMAL(10,2) NOT NULL,
@@ -94,3 +95,4 @@ CREATE TABLE BitacoraEnvio (
     FOREIGN KEY (envio_id) REFERENCES Envio(envio_id),
     FOREIGN KEY (usuario_id) REFERENCES Usuario(usuario_id)
 );
+CREATE ALIAS SP_OBTENER_ENVIOS_POR_ESTADO FOR "cr.ac.ucr.paraiso.ie.c5c089.lab5.Lab5ApplicationTests.obtenerPorEstado";

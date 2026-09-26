@@ -43,7 +43,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 
-                .requestMatchers("/", "/index.html", "/dashboard.html", "/login.html", "/styles.css", "/app.js", "/api.js", "/favicon.ico", "/error").permitAll()
+                .requestMatchers("/", "/index.html", "/dashboard.html", "/dashboard_paginado.html", "/paginacion.js", "/login.html", "/styles.css", "/app.js", "/api.js", "/favicon.ico", "/error").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/envios", "/api/v1/envios/procedimiento/*").hasAnyRole("ADMIN", "OPERADOR", "CONDUCTOR")
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/catalogos/vehiculos").hasAnyRole("ADMIN", "OPERADOR", "CONDUCTOR")
                 .requestMatchers(HttpMethod.GET, "/api/catalogos/**").hasAnyRole("ADMIN", "OPERADOR")

@@ -1,9 +1,31 @@
-# ExpresoFast - Laboratorio 8
+# ExpresoFast - Laboratorio 9
 
 Universidad de Costa Rica · IF0009 Desarrollo de Software IV · II ciclo 2026
 Carné: C5C089
 
 Consola de operación logística con Spring Boot, SQL Server, HTML, CSS y JavaScript.
+
+## Laboratorio 9
+
+Después de los scripts 01 a 04, ejecutar `database/schema.sql` y luego `database/data.sql`
+en la misma base SQL Server. El primero agrega el destinatario y el procedimiento
+`SP_OBTENER_ENVIOS_POR_ESTADO`; el segundo inserta 15 envíos con los cuatro estados.
+Se pueden volver a ejecutar sin duplicar datos. Los envíos anteriores sin destinatario
+aparecen como "Sin registrar".
+
+Iniciar sesión y abrir el enlace **Laboratorio 9** del panel, o visitar
+`http://localhost:8080/dashboard_paginado.html`.
+La vista permite buscar por rastreo, destinatario y dirección, filtrar por estado,
+elegir 5/10/20 registros y navegar entre páginas. El selector Stored Procedure consulta
+el procedimiento por estado y muestra su lista completa; en ese modo no se pagina.
+
+- `GET /api/v1/envios?page=0&size=5&sortBy=fechaCreacion&direction=desc&busqueda=&estado=`
+- `GET /api/v1/envios/procedimiento/PENDIENTE`
+
+Ambas rutas requieren JWT. Los conductores solo ven sus envíos asignados.
+`sortBy` admite id, codigoRastreo, destinatario, direccionDestino, montoFlete, estado
+y fechaCreacion; `direction` admite asc/desc. La paginación se ejecuta en la base de datos.
+El procedimiento opcional de métricas no se incluye.
 
 ## Ejecutar la API
 

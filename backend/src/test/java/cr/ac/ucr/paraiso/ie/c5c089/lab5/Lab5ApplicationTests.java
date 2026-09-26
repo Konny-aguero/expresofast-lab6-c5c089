@@ -20,7 +20,7 @@ import org.springframework.http.MediaType;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class Lab5ApplicationTests {
+public class Lab5ApplicationTests {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
     @Autowired jakarta.persistence.EntityManager entityManager;
@@ -194,5 +194,67 @@ class Lab5ApplicationTests {
         crear(auth);
         mvc.perform(delete("/api/vehiculos/10000").header("Authorization","Bearer "+auth)).andExpect(status().isConflict());
         assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM Envio",Integer.class));
+    }
+
+    @Test void paginacionFiltraOrdenaYRespetaLimites() throws Exception {
+        for (int i = 1; i <= 15; i++) {
+            jdbc.update("INSERT INTO Envio(codigo_rastreo,destinatario,direccion_destino,peso_kg,costo,estado_envio,vehiculo_id,conductor_id,fecha_creacion) VALUES(?,?,?,1,100,?,10000,1,GETDATE())",
+                String.format("LAB9-%03d", i), "Persona " + i, "Cartago", i % 2 == 0 ? "ENTREGADO" : "PENDIENTE");
+        }
+        String auth = "Bearer " + token("admin");
+        mvc.perform(get("/api/v1/envios").header("Authorization", auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content", hasSize(5)))
+            .andExpect(jsonPath("$.totalElements").value(15)).andExpect(jsonPath("$.totalPages").value(3))
+            .andExpect(jsonPath("$.first").value(true)).andExpect(jsonPath("$.last").value(false));
+        mvc.perform(get("/api/v1/envios?page=2&sortBy=codigoRastreo&direction=asc").header("Authorization", auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].codigoRastreo").value("LAB9-011"))
+            .andExpect(jsonPath("$.number").value(2)).andExpect(jsonPath("$.last").value(true));
+        mvc.perform(get("/api/v1/envios").param("busqueda", "Persona 1").param("estado", "PENDIENTE").header("Authorization", auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(4))
+            .andExpect(jsonPath("$.content[0].montoFlete").value(100));
+        mvc.perform(get("/api/v1/envios?page=3").header("Authorization", auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content", hasSize(0)));
+        mvc.perform(get("/api/v1/envios?busqueda=inexistente").header("Authorization", auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        for (String query : new String[]{"page=-1", "size=0", "size=101", "sortBy=incorrecto", "direction=incorrecta", "estado=incorrecto"}) {
+            mvc.perform(get("/api/v1/envios?" + query).header("Authorization", auth)).andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test void paginacionProtegeLosEnviosDelConductor() throws Exception {
+        crear(token("admin"));
+        jdbc.update("INSERT INTO Conductor(conductor_id,nombre,apellidos,licencia,telefono) VALUES(2,'Otro','Test','LIC-02','8888')");
+        jdbc.update("INSERT INTO Envio(codigo_rastreo,direccion_destino,peso_kg,costo,estado_envio,vehiculo_id,conductor_id) VALUES('AJENO','Cartago',1,100,'PENDIENTE',10000,2)");
+        String auth = "Bearer " + token("conductor1");
+        mvc.perform(get("/api/v1/envios").header("Authorization", auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1))
+            .andExpect(jsonPath("$.content[0].codigoRastreo").value("EXP-1234"));
+        jdbc.update("UPDATE Usuario SET conductor_id=NULL WHERE username='conductor1'");
+        entityManager.clear();
+        mvc.perform(get("/api/v1/envios").header("Authorization", auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/v1/envios")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/envios/procedimiento/PENDIENTE")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/dashboard_paginado.html")).andExpect(status().isOk());
+        mvc.perform(get("/paginacion.js")).andExpect(status().isOk());
+    }
+
+    // Equivalente H2 para verificar el mapeo @Procedure sin depender del servidor SQL externo.
+    public static java.sql.ResultSet obtenerPorEstado(java.sql.Connection conexion, String estado)
+            throws java.sql.SQLException {
+        var consulta = conexion.prepareStatement("SELECT * FROM Envio WHERE estado_envio = ? ORDER BY fecha_creacion DESC, envio_id DESC");
+        consulta.setString(1, estado);
+        return consulta.executeQuery();
+    }
+
+    @Test void procedimientoRetornaResultSetMapeado() throws Exception {
+        String auth = token("admin");
+        crear(auth);
+        mvc.perform(get("/api/v1/envios/procedimiento/PENDIENTE").header("Authorization", "Bearer " + auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].codigoRastreo").value("EXP-1234"))
+            .andExpect(jsonPath("$[0].estado").value("PENDIENTE"));
+        mvc.perform(get("/api/v1/envios/procedimiento/ENTREGADO").header("Authorization", "Bearer " + auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
     }
 }

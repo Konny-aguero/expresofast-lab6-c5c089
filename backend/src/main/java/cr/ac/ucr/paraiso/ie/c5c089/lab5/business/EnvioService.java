@@ -8,6 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,45 @@ public class EnvioService {
             .filter(e -> asignado == null || asignado.equals(e.getConductor().getId()))
             .map(this::respuesta).toList();
     }
+    @Transactional(readOnly = true)
+    public Page<EnvioDTO> listarPaginado(int page, int size, String sortBy, String dir,
+                                        String busqueda, String estado) {
+        var campos = Map.of("id", "id", "codigoRastreo", "codigoRastreo", "destinatario", "destinatario",
+            "direccionDestino", "direccionDestino", "montoFlete", "costo", "estado", "estadoEnvio",
+            "fechaCreacion", "fechaCreacion");
+        if (page < 0 || size < 1 || size > 100 || !campos.containsKey(sortBy)
+                || !("asc".equalsIgnoreCase(dir) || "desc".equalsIgnoreCase(dir)))
+            throw new IllegalArgumentException("Paginación u ordenamiento inválido (size: 1 a 100)");
+        validarEstado(estado);
+        var sort = Sort.by(Sort.Direction.fromString(dir), campos.get(sortBy)).and(Sort.by("id"));
+        var pageable = PageRequest.of(page, size, sort);
+        Integer conductorId = conductorVisible();
+        if (Integer.valueOf(-1).equals(conductorId)) return Page.empty(pageable);
+        return envios.buscarPaginado(busqueda.trim(), estado, conductorId, pageable).map(EnvioDTO::from);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EnvioDTO> listarViaStoredProcedure(String estado) {
+        validarEstado(estado);
+        if (estado.isEmpty()) throw new IllegalArgumentException("Seleccione un estado");
+        Integer conductorId = conductorVisible();
+        if (Integer.valueOf(-1).equals(conductorId)) return List.of();
+        return envios.obtenerPorEstado(estado).stream()
+            .filter(e -> conductorId == null || conductorId.equals(e.getConductor().getId()))
+            .map(EnvioDTO::from).toList();
+    }
+
+    private void validarEstado(String estado) {
+        if (!estado.isEmpty() && !TRANSICIONES.containsKey(estado))
+            throw new IllegalArgumentException("Estado inválido");
+    }
+
+    private Integer conductorVisible() {
+        if (tieneRol("ADMIN") || tieneRol("OPERADOR")) return null;
+        Usuario usuario = usuarioActual();
+        return usuario.getConductor() == null ? -1 : usuario.getConductor().getId();
+    }
+
     public EnvioResponseDTO registrarEnvio(EnvioRequestDTO dto) {
         Vehiculo vehiculo = vehiculos.findById(dto.getVehiculoId())
             .orElseThrow(() -> new ResourceNotFoundException("El vehículo especificado no existe"));
