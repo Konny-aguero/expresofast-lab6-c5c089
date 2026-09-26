@@ -1,0 +1,26 @@
+<h1>Rastrear guía</h1>
+<form #form="ngForm" (ngSubmit)="buscar()">
+  <label for="codigo">Código de rastreo</label>
+  <input id="codigo" name="codigo" [(ngModel)]="codigo" required pattern=".*\S.*" placeholder="EXP-2026-1001">
+  <button [disabled]="form.invalid || buscando">{{ buscando ? 'Buscando…' : 'Rastrear' }}</button>
+</form>
+@if (error) { <p class="error" role="alert">{{ error }}</p> }
+@if (envio) {
+  <article aria-label="Detalle del envío">
+    <h2>{{ envio.codigoRastreo }}</h2>
+    <dl>
+      <dt>Destinatario</dt><dd>{{ envio.destinatario || 'Sin registrar' }}</dd>
+      <dt>Dirección</dt><dd>{{ envio.direccionDestino }}</dd>
+      <dt>Flete</dt><dd>{{ envio.montoFlete | currency:'CRC':'symbol':'1.2-2' }}</dd>
+      <dt>Fecha de creación</dt><dd>{{ envio.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}</dd>
+      <dt>Estado</dt><dd><span class="estado" [ngClass]="envio.estado">{{ envio.estado.replace('_', ' ') }}</span></dd>
+    </dl>
+    @if (envio.estado === 'CANCELADO') {
+      <p class="error">Este envío fue cancelado.</p>
+    } @else {
+      <progress max="3" [value]="envio.estado === 'PENDIENTE' ? 1 : envio.estado === 'EN_TRANSITO' ? 2 : 3"
+        [attr.aria-label]="'Progreso del envío: ' + envio.estado"></progress>
+      <div class="pasos"><span>Pendiente</span><span>En tránsito</span><span>Entregado</span></div>
+    }
+  </article>
+}

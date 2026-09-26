@@ -1,0 +1,31 @@
+<h1>Envíos</h1>
+@if (error) { <p class="error" role="alert">{{ error }}</p> }
+@if (mensaje) { <p class="exito" role="status">{{ mensaje }}</p> }
+@if (cargando) { <p role="status">Cargando envíos…</p> }
+@else if (!error && envios.length === 0) { <p>No hay envíos registrados.</p> }
+@if (envios.length) {
+  <div class="tabla">
+    <table>
+      <thead><tr><th>Código de rastreo</th><th>Destinatario</th><th>Dirección</th><th>Flete</th><th>Estado</th><th>Actualizar estado</th></tr></thead>
+      <tbody>
+        @for (envio of envios; track envio.id) {
+          <tr>
+            <td>{{ envio.codigoRastreo }}</td><td>{{ envio.destinatario || 'Sin registrar' }}</td>
+            <td>{{ envio.direccionDestino }}</td><td>{{ envio.montoFlete | currency:'CRC':'symbol':'1.2-2' }}</td>
+            <td><span class="estado" [ngClass]="envio.estado">{{ envio.estado.replace('_', ' ') }}</span></td>
+            <td>
+              <select #selector [attr.aria-label]="'Estado de ' + envio.codigoRastreo" [ngModel]="envio.estado"
+                (ngModelChange)="cambiar(envio, $event, selector)"
+                [disabled]="actualizando !== null || api.estadosPermitidos(envio).length === 0">
+                <option [value]="envio.estado">{{ envio.estado.replace('_', ' ') }}</option>
+                @for (estado of api.estadosPermitidos(envio); track estado) {
+                  <option [value]="estado">{{ estado.replace('_', ' ') }}</option>
+                }
+              </select>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

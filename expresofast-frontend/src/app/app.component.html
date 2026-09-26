@@ -1,0 +1,23 @@
+<header>
+  <strong>ExpresoFast</strong>
+  <nav aria-label="Navegación principal">
+    <a routerLink="/envios" routerLinkActive="activo">Envíos</a>
+    <a routerLink="/nuevo-envio" routerLinkActive="activo">Nuevo envío</a>
+    <a routerLink="/rastreo" routerLinkActive="activo">Rastrear guía</a>
+  </nav>
+  @if (api.sesion()) { <button type="button" (click)="api.cerrarSesion()">Salir</button> }
+</header>
+<main>
+  @if (api.sesion()) { <router-outlet /> }
+  @else {
+    <h1>Iniciar sesión</h1>
+    <form #login="ngForm" (ngSubmit)="ingresar()">
+      <label for="usuario">Usuario</label>
+      <input id="usuario" name="usuario" [(ngModel)]="username" required autocomplete="username">
+      <label for="clave">Contraseña</label>
+      <input id="clave" name="clave" [(ngModel)]="password" type="password" required autocomplete="current-password">
+      <button [disabled]="login.invalid || cargando">{{ cargando ? 'Ingresando…' : 'Ingresar' }}</button>
+      @if (error) { <p class="error" role="alert">{{ error }}</p> }
+    </form>
+  }
+</main>

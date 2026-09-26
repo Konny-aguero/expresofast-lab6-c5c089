@@ -1,0 +1,6 @@
+.tabla { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: white; }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid #d7dfe7; }
+th { background: #e8eef4; }
+td:first-child { overflow-wrap: anywhere; }
+select { min-width: 145px; }

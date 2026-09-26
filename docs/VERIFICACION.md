@@ -5,7 +5,7 @@
 - Las pruebas cubren autenticación JWT, RBAC, CORS, DTOs, reglas de negocio, auditoría, bitácora y gestión de flota.
 - El cliente HTTP se valida con `node --test tests/frontend-api.test.cjs`.
 - Los archivos JavaScript se validan con `node --check`.
-- El JAR generado incluye el frontend y se produce en `backend/target/`.
+- El JAR generado incluye el frontend y se produce en `expresofast-backend/target/`.
 
 ## Verificación pendiente del entorno
 

@@ -1,0 +1,17 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; background: #f5f7fa; color: #203246; }
+h1 { font-size: 28px; }
+form { display: grid; gap: 10px; max-width: 500px; }
+input, select, button { font: inherit; padding: 10px; border: 1px solid #8799aa; border-radius: 4px; }
+input, select { background: white; color: #203246; }
+button { background: #245c94; color: white; cursor: pointer; }
+button:disabled, select:disabled { opacity: .6; cursor: default; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #e7a800; outline-offset: 2px; }
+form button { margin-top: 10px; }
+.error { color: #a51c30; }
+.exito { color: #146638; }
+.estado { display: inline-block; border-radius: 4px; padding: 5px 8px; font-size: 12px; white-space: nowrap; }
+.PENDIENTE { background: #fff0af; color: #705300; }
+.EN_TRANSITO { background: #d9ebff; color: #164e8a; }
+.ENTREGADO { background: #d6f3df; color: #146638; }
+.CANCELADO { background: #ffe0e4; color: #a51c30; }

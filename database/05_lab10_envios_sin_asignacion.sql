@@ -1,0 +1,3 @@
+ALTER TABLE dbo.Envio ALTER COLUMN vehiculo_id INT NULL;
+ALTER TABLE dbo.Envio ALTER COLUMN conductor_id INT NULL;
+GO

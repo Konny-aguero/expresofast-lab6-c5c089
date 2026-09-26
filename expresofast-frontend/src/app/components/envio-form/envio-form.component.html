@@ -1,0 +1,17 @@
+<h1>Nuevo envío</h1>
+@if (!api.tieneRol('ADMIN') && !api.tieneRol('OPERADOR')) {
+  <p>Solo administradores y operadores pueden registrar envíos.</p>
+} @else {
+  <form #form="ngForm" (ngSubmit)="guardar(form)">
+    <p>Todos los campos son obligatorios.</p>
+    <label for="destinatario">Destinatario</label>
+    <input id="destinatario" name="destinatario" [(ngModel)]="destinatario" required maxlength="100" pattern=".*\S.*">
+    <label for="direccion">Dirección de destino</label>
+    <input id="direccion" name="direccion" [(ngModel)]="direccionDestino" required maxlength="200" pattern=".*\S.*">
+    <label for="flete">Monto del flete (₡)</label>
+    <input id="flete" name="flete" [(ngModel)]="montoFlete" type="number" required min="0.01" max="99999999.99" step="0.01">
+    <button [disabled]="form.invalid || guardando">{{ guardando ? 'Guardando…' : 'Registrar envío' }}</button>
+  </form>
+}
+@if (error) { <p class="error" role="alert">{{ error }}</p> }
+@if (codigo) { <p class="exito" role="status">Envío registrado. Código de rastreo: <strong>{{ codigo }}</strong></p> }

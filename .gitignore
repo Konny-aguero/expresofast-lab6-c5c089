@@ -1,5 +1,9 @@
 **/target/
-backend/src/main/resources/application.properties
+**/src/main/resources/application.properties
+**/node_modules/
+**/dist/
+**/.angular/
+**/bin/
 .env
 *.log
 tmp/
