@@ -4,7 +4,7 @@ import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -258,10 +258,12 @@ public class Lab5ApplicationTests {
             .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
     }
 
-    @Test void laboratorio10RegistraRastreaYActualizaSinAsignacion() throws Exception {
+    @Test void laboratorio11RegistraPaquetesRastreaYActualiza() throws Exception {
         String auth = "Bearer " + token("admin");
         String payload = """
-            {"destinatario":" Ana Mora ","direccionDestino":" Paraíso ","montoFlete":2500.50}
+            {"destinatario":" Ana Mora ","direccionDestino":" Paraíso ","montoFlete":2500.50,
+             "numeroTracking":"EXP-LAB11", "fechaDespacho":"2026-10-02", "fechaEntregaEstimada":"2026-10-03",
+             "paquetes":[{"descripcion":"Libros","pesoKg":2.50},{"descripcion":"Ropa","pesoKg":1.25}]}
             """;
         String body = mvc.perform(post("/api/v1/envios").header("Authorization", auth)
             .contentType(MediaType.APPLICATION_JSON).content(payload))
@@ -273,7 +275,26 @@ public class Lab5ApplicationTests {
             .andReturn().getResponse().getContentAsString();
         int id = JsonPath.read(body, "$.id");
         String codigo = JsonPath.read(body, "$.codigoRastreo");
-        assertTrue(codigo.matches("EXP-\\d{4}-[A-F0-9]{21}"));
+        assertEquals("EXP-LAB11", codigo);
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM PAQUETES WHERE envio_id=?", Integer.class, id));
+        assertEquals(new java.math.BigDecimal("3.75"), jdbc.queryForObject("SELECT peso_kg FROM Envio WHERE envio_id=?", java.math.BigDecimal.class, id));
+        assertEquals(java.sql.Date.valueOf("2026-10-03"), jdbc.queryForObject("SELECT fecha_entrega_estimada FROM Envio WHERE envio_id=?", java.sql.Date.class, id));
+        mvc.perform(get("/api/envios/check-tracking/" + codigo).header("Authorization", auth))
+            .andExpect(status().isOk()).andExpect(content().string("true"));
+        mvc.perform(get("/api/envios/check-tracking/LIBRE").header("Authorization", auth))
+            .andExpect(status().isOk()).andExpect(content().string("false"));
+        mvc.perform(post("/api/v1/envios").header("Authorization", auth)
+            .contentType(MediaType.APPLICATION_JSON).content(payload)).andExpect(status().isConflict());
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM Envio", Integer.class));
+        for (String invalido : new String[]{payload.replace("2026-10-03", "2026-10-02"),
+                payload.replace("2026-10-03", "2026-10-01"),
+                payload.replace("2.50", "-1"), payload.replace("2.50", "1000"),
+                payload.replace("2.50", "1.234"),
+                payload.replace("[{\"descripcion\":\"Libros\",\"pesoKg\":2.50},{\"descripcion\":\"Ropa\",\"pesoKg\":1.25}]", "[]")}) {
+            mvc.perform(post("/api/v1/envios").header("Authorization", auth)
+                .contentType(MediaType.APPLICATION_JSON).content(invalido)).andExpect(status().isBadRequest());
+        }
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM PAQUETES", Integer.class));
         entityManager.flush();
         entityManager.clear();
         mvc.perform(get("/api/v1/envios").header("Authorization", auth))
@@ -298,7 +319,7 @@ public class Lab5ApplicationTests {
             .contentType(MediaType.APPLICATION_JSON).content("{\"nuevoEstado\":\"PENDIENTE\"}"))
             .andExpect(status().isBadRequest());
         String otro = mvc.perform(post("/api/v1/envios").header("Authorization", auth)
-            .contentType(MediaType.APPLICATION_JSON).content(payload)).andExpect(status().isCreated())
+            .contentType(MediaType.APPLICATION_JSON).content(payload.replace("EXP-LAB11", "EXP-LAB11-OTRO"))).andExpect(status().isCreated())
             .andReturn().getResponse().getContentAsString();
         assertNotEquals(codigo, JsonPath.read(otro, "$.codigoRastreo"));
         String conductor = "Bearer " + token("conductor1");

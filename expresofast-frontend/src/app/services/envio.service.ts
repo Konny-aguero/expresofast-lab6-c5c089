@@ -43,6 +43,11 @@ export class EnvioService {
     return this.http.get<Envio>(`${this.url}/rastreo/${encodeURIComponent(codigo.trim())}`)
       .pipe(catchError(this.manejarError));
   }
+  checkTracking(numeroTracking: string) {
+    const url = new URL('../envios/check-tracking/', environment.API_URL).href;
+    return this.http.get<boolean>(url + encodeURIComponent(numeroTracking.trim()))
+      .pipe(catchError(this.manejarError));
+  }
   crearEnvio(payload: CrearEnvioPayload) {
     return this.http.post<Envio>(this.url, payload).pipe(catchError(this.manejarError));
   }

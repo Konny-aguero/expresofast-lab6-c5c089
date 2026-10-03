@@ -20,6 +20,10 @@ public class EnvioController {
     }
     @GetMapping("/api/v1/envios/rastreo/{codigo}")
     public EnvioDTO rastrear(@PathVariable String codigo) { return service.obtenerPorRastreo(codigo); }
+    @GetMapping("/api/envios/check-tracking/{trackingNumber}")
+    public boolean checkTracking(@PathVariable String trackingNumber) {
+        return service.existeTracking(trackingNumber);
+    }
     @PostMapping("/api/v1/envios")
     @ResponseStatus(HttpStatus.CREATED)
     public EnvioDTO registrar(@Valid @RequestBody CrearEnvioDTO dto) { return service.crearEnvio(dto); }

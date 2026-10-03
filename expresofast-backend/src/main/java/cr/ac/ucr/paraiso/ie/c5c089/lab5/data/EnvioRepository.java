@@ -16,6 +16,7 @@ public interface EnvioRepository extends JpaRepository<Envio, Integer> {
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT e FROM Envio e WHERE e.id = :id")
     java.util.Optional<Envio> findByIdForUpdate(@Param("id") Integer id);
+    boolean existsByCodigoRastreo(String codigoRastreo);
     boolean existsByVehiculoId(Integer vehiculoId);
 
 

@@ -10,7 +10,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withFetch(), withInterceptors([(request, next) => {
       const token = sessionStorage.getItem('jwt_token');
-      return next(token && request.url.startsWith(environment.API_URL)
+      return next(token && request.url.startsWith(new URL('../', environment.API_URL).href)
         ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request);
     }]))
   ]

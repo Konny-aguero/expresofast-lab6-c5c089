@@ -48,14 +48,30 @@ public class EnvioService {
         if (!esVisible(envio, conductorVisible())) throw new ResourceNotFoundException("Envío no encontrado");
         return EnvioDTO.from(envio);
     }
+    @Transactional(readOnly = true)
+    public boolean existeTracking(String trackingNumber) {
+        return envios.existsByCodigoRastreo(trackingNumber.trim());
+    }
     public EnvioDTO crearEnvio(CrearEnvioDTO dto) {
         Envio envio = new Envio();
-        envio.setCodigoRastreo("EXP-" + java.time.Year.now().getValue() + "-"
-            + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 21).toUpperCase());
+        if (!dto.fechaEntregaEstimada().isAfter(dto.fechaDespacho()))
+            throw new IllegalArgumentException("La fecha de entrega estimada debe ser posterior a la fecha de despacho");
+        if (existeTracking(dto.numeroTracking()))
+            throw new org.springframework.dao.DataIntegrityViolationException("Este número de rastreo ya está en uso");
+        envio.setCodigoRastreo(dto.numeroTracking().trim());
+        envio.setFechaDespacho(dto.fechaDespacho());
+        envio.setFechaEntregaEstimada(dto.fechaEntregaEstimada());
+        for (PaqueteDTO datos : dto.paquetes()) {
+            Paquete paquete = new Paquete();
+            paquete.setDescripcion(datos.descripcion().trim());
+            paquete.setPesoKg(datos.pesoKg());
+            envio.agregarPaquete(paquete);
+        }
         envio.setDestinatario(dto.destinatario().trim());
         envio.setDireccionDestino(dto.direccionDestino().trim());
         envio.setCosto(dto.montoFlete());
-        envio.setPesoKg(java.math.BigDecimal.ZERO);
+        envio.setPesoKg(dto.paquetes().stream().map(PaqueteDTO::pesoKg)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
         envio.setEstadoEnvio("PENDIENTE");
         return EnvioDTO.from(envios.saveAndFlush(envio));
     }

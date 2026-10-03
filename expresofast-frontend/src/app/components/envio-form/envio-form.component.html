@@ -2,15 +2,51 @@
 @if (!api.tieneRol('ADMIN') && !api.tieneRol('OPERADOR')) {
   <p>Solo administradores y operadores pueden registrar envíos.</p>
 } @else {
-  <form #form="ngForm" (ngSubmit)="guardar(form)">
+  <form [formGroup]="form" (ngSubmit)="guardar()">
     <p>Todos los campos son obligatorios.</p>
+    <label for="tracking">Número de rastreo</label>
+    <input id="tracking" formControlName="numeroTracking" maxlength="30">
+    @if (form.controls.numeroTracking.pending) { <p role="status">Verificando número de rastreo…</p> }
+    @if (form.controls.numeroTracking.hasError('trackingTomado')) {
+      <p class="error" role="alert">Este número de rastreo ya está en uso</p>
+    }
+    @if (form.controls.numeroTracking.hasError('trackingNoVerificado')) {
+      <p class="error" role="alert">No se pudo verificar el rastreo. Modifique el campo para reintentar.</p>
+    }
     <label for="destinatario">Destinatario</label>
-    <input id="destinatario" name="destinatario" [(ngModel)]="destinatario" required maxlength="100" pattern=".*\S.*">
+    <input id="destinatario" formControlName="destinatario" maxlength="100">
     <label for="direccion">Dirección de destino</label>
-    <input id="direccion" name="direccion" [(ngModel)]="direccionDestino" required maxlength="200" pattern=".*\S.*">
+    <input id="direccion" formControlName="direccionDestino" maxlength="200">
     <label for="flete">Monto del flete (₡)</label>
-    <input id="flete" name="flete" [(ngModel)]="montoFlete" type="number" required min="0.01" max="99999999.99" step="0.01">
-    <button [disabled]="form.invalid || guardando">{{ guardando ? 'Guardando…' : 'Registrar envío' }}</button>
+    <input id="flete" formControlName="montoFlete" type="number" min="0.01" max="99999999.99" step="0.01">
+    <label for="despacho">Fecha de despacho</label>
+    <input id="despacho" formControlName="fechaDespacho" type="date">
+    <label for="entrega">Fecha de entrega estimada</label>
+    <input id="entrega" formControlName="fechaEntregaEstimada" type="date">
+    @if (form.hasError('fechasInvalidas')) {
+      <p class="error" role="alert">La fecha de entrega estimada debe ser posterior a la fecha de despacho.</p>
+    }
+    <h2>Paquetes</h2>
+    <div formArrayName="paquetes">
+      @for (paquete of paquetes.controls; track paquete; let i = $index) {
+        <fieldset [formGroupName]="i">
+          <legend>Paquete {{ i + 1 }}</legend>
+          <label [for]="'descripcion-' + i">Descripción</label>
+          <input [id]="'descripcion-' + i" formControlName="descripcion" maxlength="255">
+          <label [for]="'peso-' + i">Peso (kg)</label>
+          <input [id]="'peso-' + i" formControlName="pesoKg" type="number" min="0.01" max="999.99" step="0.01">
+          @if (paquete.invalid && paquete.touched) {
+            <p class="error">Ingrese una descripción y un peso entre 0.01 y 999.99 kg con hasta dos decimales.</p>
+          }
+          <button type="button" (click)="eliminarPaquete(i)" [disabled]="paquetes.length === 1 || guardando"
+            [attr.aria-label]="'Eliminar paquete ' + (i + 1)">X</button>
+        </fieldset>
+      }
+    </div>
+    <button type="button" (click)="agregarPaquete()" [disabled]="guardando">+ Añadir Paquete</button>
+    <button type="submit" [disabled]="form.invalid || form.pending || guardando">
+      {{ guardando ? 'Guardando…' : 'Registrar envío' }}
+    </button>
   </form>
 }
 @if (error) { <p class="error" role="alert">{{ error }}</p> }

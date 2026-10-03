@@ -96,3 +96,15 @@ CREATE TABLE BitacoraEnvio (
     FOREIGN KEY (usuario_id) REFERENCES Usuario(usuario_id)
 );
 CREATE ALIAS SP_OBTENER_ENVIOS_POR_ESTADO FOR "cr.ac.ucr.paraiso.ie.c5c089.lab5.Lab5ApplicationTests.obtenerPorEstado";
+
+-- El esquema existente usa Envio(envio_id INT).
+CREATE TABLE PAQUETES (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    envio_id INT NOT NULL,
+    descripcion VARCHAR(255) NOT NULL,
+    peso_kg DECIMAL(5,2) NOT NULL,
+    CONSTRAINT FK_Paquetes_Envios FOREIGN KEY (envio_id)
+        REFERENCES Envio(envio_id) ON DELETE CASCADE
+);
+ALTER TABLE Envio ADD fecha_despacho DATE NULL;
+ALTER TABLE Envio ADD fecha_entrega_estimada DATE NULL;

@@ -50,6 +50,25 @@ public class Envio extends AuditableEntity {
     public String getDestinatario() { return destinatario; }
     public void setDestinatario(String destinatario) { this.destinatario = destinatario; }
 
+    @Column(name = "fecha_despacho")
+    private java.time.LocalDate fechaDespacho;
+
+    @Column(name = "fecha_entrega_estimada")
+    private java.time.LocalDate fechaEntregaEstimada;
+
+    @OneToMany(mappedBy = "envio", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Paquete> paquetes = new java.util.ArrayList<>();
+
+    public java.time.LocalDate getFechaDespacho() { return fechaDespacho; }
+    public void setFechaDespacho(java.time.LocalDate fecha) { fechaDespacho = fecha; }
+    public java.time.LocalDate getFechaEntregaEstimada() { return fechaEntregaEstimada; }
+    public void setFechaEntregaEstimada(java.time.LocalDate fecha) { fechaEntregaEstimada = fecha; }
+    public List<Paquete> getPaquetes() { return paquetes; }
+    public void agregarPaquete(Paquete paquete) {
+        paquetes.add(paquete);
+        paquete.setEnvio(this);
+    }
+
     public Envio() {
     }
 

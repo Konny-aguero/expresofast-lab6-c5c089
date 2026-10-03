@@ -52,6 +52,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/catalogos/**").hasAnyRole("ADMIN", "OPERADOR")
                 
                 .requestMatchers(HttpMethod.GET, "/api/envios", "/api/envios/optimizados").hasAnyRole("ADMIN", "OPERADOR", "CONDUCTOR")
+                .requestMatchers(HttpMethod.GET, "/api/envios/check-tracking/**").hasAnyRole("ADMIN", "OPERADOR")
                 .requestMatchers(HttpMethod.POST, "/api/envios").hasAnyRole("ADMIN", "OPERADOR")
                 .requestMatchers(HttpMethod.PATCH, "/api/envios/*/estado").hasAnyRole("ADMIN", "OPERADOR", "CONDUCTOR")
                 .requestMatchers(HttpMethod.PUT, "/api/envios/*/estado").hasAnyRole("ADMIN", "OPERADOR", "CONDUCTOR")
